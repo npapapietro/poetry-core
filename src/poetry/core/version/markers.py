@@ -451,6 +451,13 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
     def __str__(self) -> str:
         return f'{self._name} {self._operator} "{self._value}"'
 
+    def validate(self, environment: dict[str, Any] | None) -> bool:
+        if self._operator in {"in", "not in"} and isinstance(
+            self._constraint, Constraint
+        ):
+            self._constraint = Constraint(self.value, self._operator)
+        return super().validate(environment)
+
 
 class AtomicMultiMarker(SingleMarkerLike[MultiConstraint]):
     def __init__(self, name: str, constraint: MultiConstraint) -> None:

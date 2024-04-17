@@ -109,6 +109,11 @@ def test_parse_marker(marker: str) -> None:
             "platform_machine",
             "!=aarch64, !=loongarch64",
         ),
+        (
+            '"tegra" in platform_machine',
+            "platform_machine",
+            "tegra",
+        ),
     ],
 )
 def test_parse_single_marker(
@@ -882,6 +887,14 @@ def test_multi_marker_removes_duplicates() -> None:
 @pytest.mark.parametrize(
     ("marker_string", "environment", "expected"),
     [
+        ('"tegra" in platform_machine', {"platform_machine": "5.10.120-tegra"}, True),
+        ('"tegra" in platform_machine', {"platform_machine": "5.10.120"}, False),
+        (
+            '"tegra" not in platform_machine',
+            {"platform_machine": "5.10.120-tegra"},
+            False,
+        ),
+        ('"tegra" not in platform_machine', {"platform_machine": "5.10.120"}, True),
         (f"os_name == '{os.name}'", None, True),
         ("os_name == 'foo'", {"os_name": "foo"}, True),
         ("os_name == 'foo'", {"os_name": "bar"}, False),

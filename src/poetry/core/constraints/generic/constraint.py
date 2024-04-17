@@ -14,17 +14,34 @@ from poetry.core.constraints.generic.empty_constraint import EmptyConstraint
 OperatorType = Callable[[object, object], Any]
 
 
+def contains(a: object, b: object, /) -> bool:
+    return operator.contains(a, b)  # type: ignore[arg-type]
+
+
+def not_contains(a: object, b: object, /) -> bool:
+    return not contains(a, b)
+
+
 class Constraint(BaseConstraint):
     OP_EQ = operator.eq
     OP_NE = operator.ne
+    OP_IN = contains
+    OP_NC = not_contains
 
     _trans_op_str: ClassVar[dict[str, OperatorType]] = {
         "=": OP_EQ,
         "==": OP_EQ,
         "!=": OP_NE,
+        "in": OP_IN,
+        "not in": OP_NC,
     }
 
-    _trans_op_int: ClassVar[dict[OperatorType, str]] = {OP_EQ: "==", OP_NE: "!="}
+    _trans_op_int: ClassVar[dict[OperatorType, str]] = {
+        OP_EQ: "==",
+        OP_NE: "!=",
+        OP_IN: "in",
+        OP_NC: "not in",
+    }
 
     def __init__(self, value: str, operator: str = "==") -> None:
         if operator == "=":
@@ -63,6 +80,9 @@ class Constraint(BaseConstraint):
             and is_other_non_equal_op
         ):
             return self._value != other.value
+
+        if self._operator in {"in", "not in"} and other.operator == "==":
+            return bool(self._trans_op_str[self._operator](other.value, self._value))
 
         return False
 
