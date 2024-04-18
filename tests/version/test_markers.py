@@ -925,6 +925,11 @@ def test_multi_marker_removes_duplicates() -> None:
         ),
         ('"tegra" not in platform_release', {"platform_release": "5.10.120"}, True),
         (
+            "platform_machine == 'aarch64' and 'tegra' in platform_release",
+            {"platform_release": "5.10.120-tegra", "platform_machine": "aarch64"},
+            True,
+        ),
+        (
             "platform_release != '4.9.253-tegra'",
             {"platform_release": "4.9.254-tegra"},
             True,

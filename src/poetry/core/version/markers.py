@@ -336,6 +336,7 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
         parser: Callable[[str], BaseConstraint | VersionConstraint]
         original_constraint_string = constraint_string = str(constraint)
 
+        self._str_cmp = str_cmp
         # Extract operator and value
         m = self._CONSTRAINT_RE.match(constraint_string)
         if m is None:
@@ -348,9 +349,11 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
         self._value = m.group(2)
         parser = parse_generic_constraint
 
-        if name in self._VERSION_LIKE_MARKER_NAME and not (
-            name == "platform_release" and str_cmp
-        ):
+        # platform_release has non-version constraints
+        # when string comparison flag is set
+        if name == "platform_release" and str_cmp:
+            pass
+        elif name in self._VERSION_LIKE_MARKER_NAME:
             parser = parse_marker_version_constraint
 
             if self._operator in {"in", "not in"}:
@@ -441,8 +444,10 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
         else:
             # We should never go there
             raise RuntimeError(f"Invalid marker operator '{self._operator}'")
-
-        return parse_marker(f"{self._name} {operator} '{self._value}'")
+        constraint = f"{self._name} {operator} '{self._value}'"
+        if self._str_cmp:
+            constraint = f'"{self._value}" {operator} {self._name}'
+        return parse_marker(constraint)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SingleMarker):
@@ -454,6 +459,8 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
         return hash(self._key)
 
     def __str__(self) -> str:
+        if self._str_cmp:
+            return f'"{self._value}" {self._operator} {self._name}'
         return f'{self._name} {self._operator} "{self._value}"'
 
     def validate(self, environment: dict[str, Any] | None) -> bool:
