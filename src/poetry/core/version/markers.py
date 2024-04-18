@@ -322,7 +322,10 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
     }
 
     def __init__(
-        self, name: str, constraint: str | BaseConstraint | VersionConstraint
+        self,
+        name: str,
+        constraint: str | BaseConstraint | VersionConstraint,
+        str_cmp: bool = False,
     ) -> None:
         from poetry.core.constraints.generic import (
             parse_constraint as parse_generic_constraint,
@@ -345,7 +348,9 @@ class SingleMarker(SingleMarkerLike[Union[BaseConstraint, VersionConstraint]]):
         self._value = m.group(2)
         parser = parse_generic_constraint
 
-        if name in self._VERSION_LIKE_MARKER_NAME:
+        if name in self._VERSION_LIKE_MARKER_NAME and not (
+            name == "platform_release" and str_cmp
+        ):
             parser = parse_marker_version_constraint
 
             if self._operator in {"in", "not in"}:
@@ -901,11 +906,12 @@ def _compact_markers(
 
         elif token.data == f"{tree_prefix}item":
             name, op, value = token.children
-            if value.type == f"{tree_prefix}MARKER_NAME":
+            str_cmp = value.type == f"{tree_prefix}MARKER_NAME"
+            if str_cmp:
                 name, value = value, name
 
             value = value[1:-1]
-            sub_marker = SingleMarker(str(name), f"{op}{value}")
+            sub_marker = SingleMarker(str(name), f"{op}{value}", str_cmp=str_cmp)
             groups[-1].append(sub_marker)
 
         elif token.data == f"{tree_prefix}BOOL_OP" and token.children[0] == "or":
