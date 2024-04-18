@@ -77,6 +77,7 @@ def parse_single_constraint(
     constraint: str, *, is_marker_constraint: bool = False
 ) -> VersionConstraint:
     from poetry.core.constraints.version.patterns import BASIC_CONSTRAINT
+    from poetry.core.constraints.version.patterns import BASIC_RELEASE_CONSTRAINT
     from poetry.core.constraints.version.patterns import CARET_CONSTRAINT
     from poetry.core.constraints.version.patterns import TILDE_CONSTRAINT
     from poetry.core.constraints.version.patterns import TILDE_PEP440_CONSTRAINT
@@ -84,14 +85,13 @@ def parse_single_constraint(
     from poetry.core.constraints.version.version import Version
     from poetry.core.constraints.version.version_range import VersionRange
     from poetry.core.constraints.version.version_union import VersionUnion
+    from poetry.core.version.pep440 import ReleaseTag
 
-    m = re.match(r"(?i)^v?[xX*](\.[xX*])*$", constraint)
-    if m:
+    if m := re.match(r"(?i)^v?[xX*](\.[xX*])*$", constraint):
         return VersionRange()
 
     # Tilde range
-    m = TILDE_CONSTRAINT.match(constraint)
-    if m:
+    if m := TILDE_CONSTRAINT.match(constraint):
         try:
             version = Version.parse(m.group("version"))
         except InvalidVersion as e:
@@ -106,8 +106,8 @@ def parse_single_constraint(
         return VersionRange(version, high, include_min=True)
 
     # PEP 440 Tilde range (~=)
-    m = TILDE_PEP440_CONSTRAINT.match(constraint)
-    if m:
+
+    if m := TILDE_PEP440_CONSTRAINT.match(constraint):
         try:
             version = Version.parse(m.group("version"))
         except InvalidVersion as e:
@@ -123,8 +123,8 @@ def parse_single_constraint(
         return VersionRange(version, high, include_min=True)
 
     # Caret range
-    m = CARET_CONSTRAINT.match(constraint)
-    if m:
+
+    if m := CARET_CONSTRAINT.match(constraint):
         try:
             version = Version.parse(m.group("version"))
         except InvalidVersion as e:
@@ -135,8 +135,7 @@ def parse_single_constraint(
         return VersionRange(version, version.next_breaking(), include_min=True)
 
     # X Range
-    m = X_CONSTRAINT.match(constraint)
-    if m:
+    if m := X_CONSTRAINT.match(constraint):
         op = m.group("op")
 
         try:
@@ -149,8 +148,7 @@ def parse_single_constraint(
             raise ValueError(f"Could not parse version constraint: {constraint}")
 
     # Basic comparator
-    m = BASIC_CONSTRAINT.match(constraint)
-    if m:
+    if m := BASIC_CONSTRAINT.match(constraint):
         op = m.group("op")
         version_string = m.group("version")
 
@@ -163,7 +161,6 @@ def parse_single_constraint(
             raise ParseConstraintError(
                 f"Could not parse version constraint: {constraint}"
             ) from e
-
         if op == "<":
             return VersionRange(max=version)
         if op == "<=":
@@ -180,6 +177,39 @@ def parse_single_constraint(
                 is_marker_constraint=is_marker_constraint,
             )
 
+        if op == "!=":
+            return VersionUnion(VersionRange(max=version), VersionRange(min=version))
+        return version
+
+    # These below should be reserved for comparing non python packages such as OS
+    # versions using `platform_release`
+    if m := BASIC_RELEASE_CONSTRAINT.match(constraint):
+        op = m.group("op")
+        major = m.group("major")
+        minor = m.group("minor")
+        patch = m.group("patch")
+        # certain OS releases aren't semver or pep440 compliant
+        build = m.group("build")
+        try:
+            version = Version.from_parts(
+                major=int(major),
+                minor=int(minor) if minor else None,
+                patch=int(patch) if patch else None,
+                post=ReleaseTag(phase=build),
+            )
+        except InvalidVersion as e:
+            raise ParseConstraintError(
+                f"Could not parse version constraint: {constraint}"
+            ) from e
+
+        if op == "<":
+            return VersionRange(max=version)
+        if op == "<=":
+            return VersionRange(max=version, include_max=True)
+        if op == ">":
+            return VersionRange(min=version)
+        if op == ">=":
+            return VersionRange(min=version, include_min=True)
         if op == "!=":
             return VersionUnion(VersionRange(max=version), VersionRange(min=version))
 

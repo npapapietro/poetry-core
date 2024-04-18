@@ -887,14 +887,6 @@ def test_multi_marker_removes_duplicates() -> None:
 @pytest.mark.parametrize(
     ("marker_string", "environment", "expected"),
     [
-        ('"tegra" in platform_machine', {"platform_machine": "5.10.120-tegra"}, True),
-        ('"tegra" in platform_machine', {"platform_machine": "5.10.120"}, False),
-        (
-            '"tegra" not in platform_machine',
-            {"platform_machine": "5.10.120-tegra"},
-            False,
-        ),
-        ('"tegra" not in platform_machine', {"platform_machine": "5.10.120"}, True),
         (f"os_name == '{os.name}'", None, True),
         ("os_name == 'foo'", {"os_name": "foo"}, True),
         ("os_name == 'foo'", {"os_name": "bar"}, False),
@@ -924,6 +916,24 @@ def test_multi_marker_removes_duplicates() -> None:
         ("sys.platform == 'win32'", {"sys_platform": "linux2"}, False),
         ("platform.version in 'Ubuntu'", {"platform_version": "#39"}, False),
         ("platform.machine=='x86_64'", {"platform_machine": "x86_64"}, True),
+        ('"tegra" in platform_machine', {"platform_machine": "5.10.120-tegra"}, True),
+        ('"tegra" in platform_machine', {"platform_machine": "5.10.120"}, False),
+        (
+            '"tegra" not in platform_machine',
+            {"platform_machine": "5.10.120-tegra"},
+            False,
+        ),
+        ('"tegra" not in platform_machine', {"platform_machine": "5.10.120"}, True),
+        (
+            "platform_release != '4.9.253-tegra'",
+            {"platform_release": "4.9.254-tegra"},
+            True,
+        ),
+        (
+            "platform_release < '5.10.123-tegra' and platform_release >= '4.9.254-tegra'",
+            {"platform_release": "4.9.254-tegra"},
+            True,
+        ),
         (
             "platform.python_implementation=='Jython'",
             {"platform_python_implementation": "CPython"},

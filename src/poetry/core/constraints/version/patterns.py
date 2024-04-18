@@ -5,6 +5,24 @@ import re
 from packaging.version import VERSION_PATTERN
 
 
+RELEASE_PATTERN = r"""
+(?P<major>0|[1-9]\d*)
+(?:
+    \.
+    (?P<minor>0|[1-9]\d*)
+    (?:
+        \.
+        (?P<patch>0|[1-9]\d*)
+        (?P<nonstd>(?:\.(0|[1-9]\d*))*)?
+    )
+)
+(?:\+|-(?P<build>
+    [0-9a-zA-Z-]+
+    (?:\.[0-9a-zA-Z-]+)*
+))?
+"""
+
+
 COMPLETE_VERSION = re.compile(VERSION_PATTERN, re.VERBOSE | re.IGNORECASE)
 
 CARET_CONSTRAINT = re.compile(
@@ -20,9 +38,15 @@ X_CONSTRAINT = re.compile(
     r"^(?P<op>!=|==)?\s*v?(?P<version>(\d+)(?:\.(\d+))?(?:\.(\d+))?)(?:\.[xX*])+$"
 )
 
+
 # note that we also allow technically incorrect version patterns with astrix (eg: 3.5.*)
 # as this is supported by pip and appears in metadata within python packages
 BASIC_CONSTRAINT = re.compile(
     rf"^(?P<op><>|!=|>=?|<=?|==?)?\s*(?P<version>{VERSION_PATTERN}|dev)(?P<wildcard>\.\*)?$",
+    re.VERBOSE | re.IGNORECASE,
+)
+
+BASIC_RELEASE_CONSTRAINT = re.compile(
+    rf"^(?P<op><>|!=|>=?|<=?|==?)?\s*(?P<version>{RELEASE_PATTERN})$",
     re.VERBOSE | re.IGNORECASE,
 )
